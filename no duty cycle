@@ -1,6 +1,3 @@
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%% 不同d值下的系数 %%%%%%%%%%%%%%%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 clear all;
 %占空比=(T+2tao)/Tc时 8607
 format long;%控制输出格式为long，15字长定点数
@@ -14,7 +11,7 @@ Tc=Tc1/1000;%开环运行时间，以s为单位
 tao1=14;
 % input('pulse time(ms)=');%%pulse time，以ms为单位
 tao=tao1/1000;%脉冲作用时间，以s为单位
-d=0.01;
+d=0.4;
 % input('占空比=')，占空比表示(T+2t)/Tc;                       
 dsize=size(d);
 dsize=dsize(2);
@@ -34,10 +31,6 @@ b=power/tao;%rabi frequency
 %n=10;
 wm=20;%modulation depth
 syms t;%定义符号变量
-S0=zeros(1,dsize);
-gs=zeros(1,dsize);%生成零矩阵
-gc=zeros(1,dsize);
-g0=zeros(1,dsize);
 a=-sin(power)*sin(wm*T);
 
 dt=1e-5;%数值运算步长，决定了运行速度
@@ -45,7 +38,7 @@ dt=1e-5;%数值运算步长，决定了运行速度
 m1=1:m0;m=m1';
 
 fc=m./Tc;
-Sy=40*fc.^(-1)-108.62;
+Sy=2.17*10^(-29)*fc.^(2)+2.17*10^(-27)*fc.^+2.17*10^(-25);
 % Sy=1.71387E-17*fc^(-2)+-1.53791*10^(-17)*fc^(-1)+2.0183*10^(-18)+-7.60216E-22*fc+4.87328E-26*fc^(2);%本振自由运转的相对频率起伏功率谱密度,power spectral density of the fractional fluctuations
 %if fc<100
 %    Sy=1.72*10^-26*fc^2;
@@ -67,26 +60,33 @@ gmc3=zeros(m0,dsize);
 g01=zeros(m0,dsize);
 g02=zeros(m0,dsize);
 g03=zeros(m0,dsize);
+% S0=zeros(m0,dsize);
+S0=0;
+gs=zeros(m0,dsize);%生成零矩阵
+gc=zeros(m0,dsize);
+g0=zeros(m0,dsize);
 
 for j=1:dsize
     for i=0:(tao/dt)
-            gms1(:,j)=gms1(:,j)+a*sin(b*i*dt)/Tc*sin(2*pi*m*i*dt./Tc)*dt;
-            gmc1(:,j)=gmc1(:,j)+a*sin(b*i*dt)/Tc*cos(2*pi*m*i*dt./Tc)*dt;
-            g01(:,j)=g01(:,j)+a*sin(b*i*dt)/Tc*dt;
+        gms1(:,j)=gms1(:,j)+a*sin(b*i*dt)/Tc*sin(2*pi*m*i*dt./Tc)*dt;
+        gmc1(:,j)=gmc1(:,j)+a*sin(b*i*dt)/Tc*cos(2*pi*m*i*dt./Tc)*dt;
+        g01(:,j)=g01(:,j)+a*sin(b*i*dt)/Tc*dt;
     end
 
-    for i=(tao/dt):((tao+T(j))/dt)
+    for i=(tao/dt):((tao+T)/dt)
         gms2(:,j)=gms2(:,j)+a*sin(b*tao)/Tc.*sin(2*pi*m*i*dt/Tc)*dt;
         gmc2(:,j)=gmc2(:,j)+a*sin(b*tao)/Tc.*cos(2*pi*m*i*dt/Tc)*dt;
         g02(:,j)=g02(:,j)+a*sin(b*tao)/Tc*dt;
     end
 
-    for i=((tao+T(j))/dt):((2*tao+T(j))/dt)
+    for i=((tao+T)/dt):((2*tao+T)/dt)
         gms3(:,j)=gms3(:,j)+a*sin(b*(T(j)+2*tao-i*dt))/Tc.*sin(2*pi*m*i*dt/Tc)*dt;
         gmc3(:,j)=gmc3(:,j)+a*sin(b*(T(j)+2*tao-i*dt))/Tc.*cos(2*pi*m*i*dt/Tc)*dt;
         g03(:,j)=g03(:,j)+a*sin(b*(T(j)+2*tao-i*dt))/Tc*dt;
     end
 end
+
+g0(1)=g01(1,1)+g02(1,1)+g03(1,1);
 
 for i=1:m0
 % if fc(i)<=1000
@@ -97,19 +97,18 @@ for i=1:m0
 % 	Sy(i)=2/(6.834*10^9)^2*10^(-7.2)*fc(i) ;
 % 	end
 % end
-gs=gms1(i,:)+gms2(i,:)+gms3(i,:);
-gc=gmc1(i,:)+gmc2(i,:)+gmc3(i,:);
-g0=g01(i,:)+g02(i,:)+g03(i,:);
+gs(i)=gms1(i,1)+gms2(i,1)+gms3(i,1);
+gc(i)=gmc1(i,1)+gmc2(i,1)+gmc3(i,1);
 
 % coefficients1_sum=zero()
 % for i=d
 % coefficients1_sum=coefficients1_sum+coefficients1(:,i);
 % end
 
-S0=S0+(gs.^2+gc.^2)./g0.^2.*Sy(i);%Dick 给出由白频率调制噪声引起的频率起伏功率谱密度
+S0=S0+(gs(i)^2+gc(i)^2)./g0(1)^2.*Sy(i);%Dick 给出由白频率调制噪声引起的频率起伏功率谱密度
 end
 
-allan1 = (S0).^(0.5)
+allan1 = (S0).^(0.5);
 % %  tol=1:4:100000;%此处输出均为行向量，如要进行数据存储，则要转换为列向量
 % %  
 % % % % toll=log(tol);
@@ -124,3 +123,4 @@ allan1 = (S0).^(0.5)
 l=cat(2,d',allan1');
 xlswrite('5.xlsx',l);
 % % 
+% 
